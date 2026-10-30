@@ -2,7 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- Launch Screen configuration (Must be at the root level) -->
+    <!-- Launch Screen configuration -->
     <key>UILaunchStoryboardName</key>
     <string>LaunchScreen</string>
 

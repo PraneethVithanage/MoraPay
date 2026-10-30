@@ -22,13 +22,12 @@ public class AuthViewController: UIViewController {
         setupUI()
     }
 
-    // REMOVED: viewDidAppear auto-trigger so Face ID won't popup automatically
-
     private func setupUI() {
         view.backgroundColor = moraDarkBackground
 
         // Moratuwa Logo Image
-        logoImageView.image = UIImage(named: "mora_logo")
+        logoImageView.image = UIImage(named: "mora_logo") ?? UIImage(systemName: "building.columns.fill")
+        logoImageView.tintColor = moraGold
         logoImageView.contentMode = .scaleAspectFit
         logoImageView.translatesAutoresizingMaskIntoConstraints = false
 
@@ -98,6 +97,9 @@ public class AuthViewController: UIViewController {
                     }
                 }
             }
+        } else {
+            // Fallback for Simulator without biometrics
+            self.dismiss(animated: true, completion: nil)
         }
     }
 }

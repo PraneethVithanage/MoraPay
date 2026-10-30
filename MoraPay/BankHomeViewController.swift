@@ -24,6 +24,27 @@ public class BankHomeViewController: UIViewController {
         super.viewDidLoad()
         setupUI()
         setupKeyboardDismissal()
+        updateBalanceDisplay()
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleBalanceChange),
+            name: AccountManager.balanceDidChangeNotification,
+            object: nil
+        )
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    @objc private func handleBalanceChange() {
+        updateBalanceDisplay()
+    }
+
+    private func updateBalanceDisplay() {
+        let current = AccountManager.shared.currentBalance
+        balanceLabel.text = String(format: "$%.2f", current)
     }
 
     private func setupUI() {
@@ -56,7 +77,6 @@ public class BankHomeViewController: UIViewController {
         gradient.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width - 40, height: 180)
         balanceCardView.layer.insertSublayer(gradient, at: 0)
 
-        balanceLabel.text = "$14,850.50"
         balanceLabel.font = UIFont.systemFont(ofSize: 36, weight: .heavy)
         balanceLabel.textColor = .white
         balanceLabel.translatesAutoresizingMaskIntoConstraints = false
