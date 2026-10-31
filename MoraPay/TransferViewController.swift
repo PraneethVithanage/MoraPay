@@ -1,6 +1,12 @@
-
+//
+//  TransferViewController.swift
+//  SecurePay
+//
+//  Created by Praneeth Vithanage on 2026-10-14.
+//
 
 import UIKit
+import LocalAuthentication
 
 public class TransferViewController: UIViewController, UITextFieldDelegate {
 
@@ -69,7 +75,6 @@ public class TransferViewController: UIViewController, UITextFieldDelegate {
         ])
     }
 
-    /// Tap anywhere outside text fields to dismiss keyboard
     private func setupKeyboardDismissal() {
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
         tapGesture.cancelsTouchesInView = false
@@ -79,8 +84,6 @@ public class TransferViewController: UIViewController, UITextFieldDelegate {
     @objc private func dismissKeyboard() {
         view.endEditing(true)
     }
-
-    // MARK: - UITextFieldDelegate
 
     public func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         if textField == recipientTextField {
@@ -92,17 +95,69 @@ public class TransferViewController: UIViewController, UITextFieldDelegate {
     }
 
     @objc private func handleSend() {
-        dismissKeyboard() // Dismiss keyboard before presenting modal action
+        dismissKeyboard()
         
-        let alert = UIAlertController(
-            title: "Biometric Authentication",
-            message: "Authenticate with Face ID / Touch ID to confirm orange transfer.",
-            preferredStyle: .alert
-        )
-        alert.addAction(UIAlertAction(title: "Authenticate", style: .default, handler: { [weak self] _ in
-            self?.navigationController?.popViewController(animated: true)
-        }))
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+        guard let recipient = recipientTextField.text, !recipient.trimmingCharacters(in: .whitespaces).isEmpty else {
+            showAlert(title: "Missing Information", message: "Please enter a recipient username or email.")
+            return
+        }
+
+        let rawAmount = (amountTextField.text ?? "").replacingOccurrences(of: "$", with: "")
+        guard let amount = Double(rawAmount), amount > 0 else {
+            showAlert(title: "Invalid Amount", message: "Please enter a valid transfer amount greater than zero.")
+            return
+        }
+
+        let securityEngine = SecurityEngine()
+        if !securityEngine.validateTransactionRisk(amount: amount) {
+            showAlert(title: "Transfer Limit Exceeded", message: "Single transfers over $10,000.00 require branch verification.")
+            return
+        }
+
+        if amount > AccountManager.shared.currentBalance {
+            showAlert(title: "Insufficient Balance", message: "You do not have enough funds to complete this transaction.")
+            return
+        }
+
+        promptBiometricsAndExecute(recipient: recipient, amount: amount)
+    }
+
+    private func promptBiometricsAndExecute(recipient: String, amount: Double) {
+        let context = LAContext()
+        var error: NSError?
+
+        let executePayment = { [weak self] in
+            guard let self = self else { return }
+            let success = AccountManager.shared.processTransfer(to: recipient, amount: amount)
+            if success {
+                let alert = UIAlertController(title: "Transfer Complete", message: "Successfully sent $\(String(format: "%.2f", amount)) to \(recipient).", preferredStyle: .alert)
+                alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { _ in
+                    self.navigationController?.popViewController(animated: true)
+                }))
+                self.present(alert, animated: true)
+            } else {
+                self.showAlert(title: "Error", message: "Unable to process transfer. Please try again.")
+            }
+        }
+
+        if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
+            context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: "Confirm payment of $\(amount) to \(recipient)") { success, _ in
+                DispatchQueue.main.async {
+                    if success {
+                        executePayment()
+                    } else {
+                        self.showAlert(title: "Authentication Failed", message: "Biometric authentication failed. Transfer was not completed.")
+                    }
+                }
+            }
+        } else {
+            executePayment()
+        }
+    }
+
+    private func showAlert(title: String, message: String) {
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
     }
 }

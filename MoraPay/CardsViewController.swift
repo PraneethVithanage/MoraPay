@@ -11,7 +11,7 @@ public class CardsViewController: UIViewController {
 
     private let primaryOrange = UIColor(red: 0.96, green: 0.65, blue: 0.13, alpha: 1.0)
     private let cardGradientStart = UIColor(red: 0.96, green: 0.65, blue: 0.13, alpha: 1.0)
-    private let cardGradientEnd = UIColor(red: 0.96, green: 0.65, blue: 0.13, alpha: 1.0)
+    private let cardGradientEnd = UIColor(red: 0.85, green: 0.25, blue: 0.0, alpha: 1.0)
 
     private let cardContainerView = UIView()
     private let cardNumberLabel = UILabel()
@@ -26,7 +26,6 @@ public class CardsViewController: UIViewController {
 
     public override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        // Ensure gradient layer automatically adapts to card container bounds on layout changes
         if let gradientLayer = cardContainerView.layer.sublayers?.first as? CAGradientLayer {
             gradientLayer.frame = cardContainerView.bounds
         }
@@ -36,7 +35,6 @@ public class CardsViewController: UIViewController {
         title = "Virtual Cards"
         view.backgroundColor = UIColor(red: 0.07, green: 0.07, blue: 0.09, alpha: 1.0)
 
-        // Navigation Bar Appearance
         let navAppearance = UINavigationBarAppearance()
         navAppearance.configureWithOpaqueBackground()
         navAppearance.backgroundColor = UIColor(red: 0.07, green: 0.07, blue: 0.09, alpha: 1.0)
@@ -50,12 +48,11 @@ public class CardsViewController: UIViewController {
         cardContainerView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(cardContainerView)
 
-        // Orange Gradient Layer with correct bounds
+        // Orange Gradient Layer
         let gradient = CAGradientLayer()
         gradient.colors = [cardGradientStart.cgColor, cardGradientEnd.cgColor]
         gradient.startPoint = CGPoint(x: 0, y: 0)
         gradient.endPoint = CGPoint(x: 1, y: 1)
-        gradient.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width - 40, height: 200)
         cardContainerView.layer.insertSublayer(gradient, at: 0)
 
         // Card Details Labels
@@ -91,7 +88,6 @@ public class CardsViewController: UIViewController {
 
         view.addSubview(freezeButton)
 
-        // AutoLayout Constraints
         NSLayoutConstraint.activate([
             cardContainerView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
             cardContainerView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
@@ -118,5 +114,6 @@ public class CardsViewController: UIViewController {
         let isFrozen = freezeButton.title(for: .normal) == "Freeze Card"
         freezeButton.setTitle(isFrozen ? "Unfreeze Card" : "Freeze Card", for: .normal)
         freezeButton.backgroundColor = isFrozen ? primaryOrange.withAlphaComponent(0.2) : UIColor.white.withAlphaComponent(0.08)
+        cardContainerView.alpha = isFrozen ? 0.6 : 1.0
     }
 }

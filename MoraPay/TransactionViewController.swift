@@ -5,8 +5,6 @@
 //  Created by Praneeth Vithanage on 2026-10-14.
 //
 
-
-
 import UIKit
 
 public class TransactionViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, UISearchBarDelegate {
@@ -15,12 +13,8 @@ public class TransactionViewController: UIViewController, UITableViewDelegate, U
     private let searchBar = UISearchBar()
     private let tableView = UITableView()
 
-    private let transactions = [
-        ("Apple Store", "-$1,299.00", "Oct 21, 2026", "bag.fill"),
-        ("Salary Deposit", "+$4,500.00", "Oct 15, 2026", "arrow.down.circle.fill"),
-        ("Starbucks Coffee", "-$6.50", "Oct 14, 2026", "cup.and.saucer.fill"),
-        ("Uber Ride", "-$24.30", "Oct 12, 2026", "car.fill")
-    ]
+    private var allTransactions: [TransactionItem] = []
+    private var filteredTransactions: [TransactionItem] = []
 
     public override func viewDidLoad() {
         super.viewDidLoad()
@@ -56,10 +50,49 @@ public class TransactionViewController: UIViewController, UITableViewDelegate, U
         let tap = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
         tap.cancelsTouchesInView = false
         view.addGestureRecognizer(tap)
+
+        loadTransactions()
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleTransactionsChange),
+            name: AccountManager.transactionsDidChangeNotification,
+            object: nil
+        )
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    @objc private func handleTransactionsChange() {
+        loadTransactions()
+    }
+
+    private func loadTransactions() {
+        allTransactions = AccountManager.shared.transactions
+        filterContent(searchText: searchBar.text ?? "")
+    }
+
+    private func filterContent(searchText: String) {
+        if searchText.trimmingCharacters(in: .whitespaces).isEmpty {
+            filteredTransactions = allTransactions
+        } else {
+            filteredTransactions = allTransactions.filter {
+                $0.title.lowercased().contains(searchText.lowercased()) ||
+                $0.amount.lowercased().contains(searchText.lowercased()) ||
+                $0.date.lowercased().contains(searchText.lowercased())
+            }
+        }
+        tableView.reloadData()
     }
 
     @objc private func dismissKeyboard() {
         view.endEditing(true)
+    }
+
+    public func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        filterContent(searchText: searchText)
     }
 
     public func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
@@ -67,28 +100,28 @@ public class TransactionViewController: UIViewController, UITableViewDelegate, U
     }
 
     public func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return transactions.count
+        return filteredTransactions.count
     }
 
     public func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = UITableViewCell(style: .subtitle, reuseIdentifier: "cell")
-        let item = transactions[indexPath.row]
+        let item = filteredTransactions[indexPath.row]
         cell.backgroundColor = UIColor.white.withAlphaComponent(0.04)
-        cell.textLabel?.text = item.0
+        cell.textLabel?.text = item.title
         cell.textLabel?.textColor = .white
         cell.textLabel?.font = UIFont.systemFont(ofSize: 16, weight: .bold)
 
-        cell.detailTextLabel?.text = item.2
+        cell.detailTextLabel?.text = item.date
         cell.detailTextLabel?.textColor = .gray
 
         let amountLabel = UILabel()
-        amountLabel.text = item.1
-        amountLabel.textColor = item.1.contains("+") ? primaryOrange : .lightGray
+        amountLabel.text = item.amount
+        amountLabel.textColor = item.isCredit ? primaryOrange : .lightGray
         amountLabel.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
         amountLabel.sizeToFit()
         cell.accessoryView = amountLabel
 
-        cell.imageView?.image = UIImage(systemName: item.3)
+        cell.imageView?.image = UIImage(systemName: item.iconName)
         cell.imageView?.tintColor = primaryOrange
 
         return cell
