@@ -95,55 +95,69 @@ public class TransferViewController: UIViewController, UITextFieldDelegate {
     }
 
     @objc private func handleSend() {
-            dismissKeyboard()
-            
-            guard let recipient = recipientTextField.text, !recipient.trimmingCharacters(in: .whitespaces).isEmpty else {
-                showAlert(title: "Missing Information", message: "Please enter a recipient username or email.")
-                return
-            }
+        dismissKeyboard()
+         
+        guard let recipient = recipientTextField.text, !recipient.trimmingCharacters(in: .whitespaces).isEmpty else {
+            showAlert(title: "Missing Information", message: "Please enter a recipient username or email.")
+            return
+        }
 
-            let rawAmount = (amountTextField.text ?? "").replacingOccurrences(of: "$", with: "")
-            guard let amount = Double(rawAmount), amount > 0 else {
-                showAlert(title: "Invalid Amount", message: "Please enter a valid transfer amount greater than zero.")
-                return
-            }
+        let rawAmount = (amountTextField.text ?? "").replacingOccurrences(of: "$", with: "")
+        guard let amount = Double(rawAmount), amount > 0 else {
+            showAlert(title: "Invalid Amount", message: "Please enter a valid transfer amount greater than zero.")
+            return
+        }
 
-            let securityEngine = SecurityEngine()
-            if !securityEngine.validateTransactionRisk(amount: amount) {
-                showAlert(title: "Transfer Limit Exceeded", message: "Single transfers over $10,000.00 require branch verification.")
-                return
-            }
+        let securityEngine = SecurityEngine()
+        if !securityEngine.validateTransactionRisk(amount: amount) {
+            showAlert(title: "Transfer Limit Exceeded", message: "Single transfers over $10,000.00 require branch verification.")
+            return
+        }
 
-            if amount > AccountManager.shared.currentBalance {
-                showAlert(title: "Insufficient Balance", message: "You do not have enough funds to complete this transaction.")
-                return
-            }
-
-            // --- ML FRAUD RISK ANALYSIS ---
-            let alert = UIAlertController(title: "Analyzing Transaction...", message: "Running on-device ML security model...", preferredStyle: .alert)
-            present(alert, animated: true)
-
-            // Updated closure now receives `analysisResult` of type `FraudAnalysisResult`
-            SecurityMLManager.shared.analyzeFraudRisk(accountID: recipient, amount: amount) { [weak self] analysisResult in
-                guard let self = self else { return }
-                
-                alert.dismiss(animated: true) {
-                    let percentage = Int(analysisResult.riskScore * 100)
-                    
-                    if analysisResult.isFlagged {
-                        // Combine all detected risk factors into a formatted bulleted list
-                        let factorsText = analysisResult.riskFactors.joined(separator: "\n• ")
-                        self.showAlert(
-                            title: "⚠️ High Fraud Risk Detected (\(percentage)%)",
-                            message: "Our ML security model blocked this transfer due to the following indicators:\n• \(factorsText)"
-                        )
-                    } else {
-                        // Low Risk -> Proceed to Biometric Auth & Transfer
-                        self.promptBiometricsAndExecute(recipient: recipient, amount: amount)
-                    }
-                }
+        if amount > AccountManager.shared.currentBalance {
+            showAlert(title: "Insufficient Balance", message: "You do not have enough funds to complete this transaction.")
+            return
+        }
+     
+        // --- ML FRAUD RISK ANALYSIS ---
+        let alert = UIAlertController(title: "Analyzing Transaction...", message: "Running on-device ML security model...", preferredStyle: .alert)
+        present(alert, animated: true)
+         
+        let telemetry = TransactionTelemetry(
+            amount: amount,
+            recipientAccountAgeDays: 2,
+            transferVelocity1Min: 1,
+            timeZScore: 0.8,
+            isRootedOrJailbroken: false
+        )
+         
+        let analysisResult = MoraPaySecurityEngine.shared.evaluateTransaction(telemetry)
+         
+        // Securely record audit log via encrypted store instead of UserDefaults
+        MoraPaySecureStore.shared.saveTransactionAuditLog(
+            transactionId: UUID().uuidString,
+            amount: amount,
+            riskScore: analysisResult.compositeScore,
+            isBlocked: analysisResult.isHighRisk
+        )
+         
+        alert.dismiss(animated: true) { [weak self] in
+            guard let self = self else { return }
+             
+            let percentage = Int(analysisResult.compositeScore * 100)
+             
+            if analysisResult.isHighRisk {
+                let factorsText = analysisResult.topRiskFactors.joined(separator: "\n• ")
+                self.showAlert(
+                    title: "⚠️ High Fraud Risk Detected (\(percentage)%)",
+                    message: "Our ML security model flagged this transfer due to the following indicators:\n• \(factorsText)"
+                )
+            } else {
+                // Low Risk -> Proceed to Biometric Auth & Transfer
+                self.promptBiometricsAndExecute(recipient: recipient, amount: amount)
             }
         }
+    }
 
     private func promptBiometricsAndExecute(recipient: String, amount: Double) {
         let context = LAContext()

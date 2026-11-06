@@ -61,6 +61,12 @@ public class TransactionViewController: UIViewController, UITableViewDelegate, U
         )
     }
 
+    public override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        // Refresh audit logs from secure storage each time view appears
+        loadTransactions()
+    }
+
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
@@ -70,7 +76,30 @@ public class TransactionViewController: UIViewController, UITableViewDelegate, U
     }
 
     private func loadTransactions() {
-        allTransactions = AccountManager.shared.transactions
+        // Pull account manager items
+        var items = AccountManager.shared.transactions
+        
+        // Also fetch encrypted audit logs from MoraPaySecureStore and map them to display items
+        let secureLogs = MoraPaySecureStore.shared.fetchTransactionAuditLogs()
+        for log in secureLogs {
+            let amountVal = log["amount"] as? Double ?? 0.0
+            let isBlocked = log["isBlocked"] as? Bool ?? false
+            let timestamp = log["timestamp"] as? String ?? ""
+            
+            let displayTitle = isBlocked ? "Blocked High-Risk Transfer" : "Secure Transfer"
+            let amountString = String(format: "$%.2f", amountVal)
+            
+            let secureItem = TransactionItem(
+                title: displayTitle,
+                amount: amountString,
+                date: timestamp,
+                iconName: isBlocked ? "exclamationmark.shield.fill" : "arrow.up.right.circle.fill",
+                isCredit: false
+            )
+            items.append(secureItem)
+        }
+        
+        allTransactions = items
         filterContent(searchText: searchBar.text ?? "")
     }
 
