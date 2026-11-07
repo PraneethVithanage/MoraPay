@@ -46,7 +46,6 @@ public final class MoraPaySecurityEngine {
         // Tuned: Triggers when transfer velocity is greater than 1 attempt in 1 minute (i.e., 2nd attempt onwards)
         if telemetry.transferVelocity1Min > 1 {
             rulePenalty = max(rulePenalty, 0.9)
-            factors.append("High number of rapid transfer attempts.")
         }
         
         // 2. Simulated ML Ensemble Probability (P_ML)
@@ -72,38 +71,50 @@ public final class MoraPaySecurityEngine {
     }
     
     private func calculateMLProbability(telemetry: TransactionTelemetry) -> Double {
-        let ageFactor = telemetry.recipientAccountAgeDays < 7 ? 0.85 : 0.05
-        let velocityFactor = Double(telemetry.transferVelocity1Min) / 10.0
-        let timeFactor = min(abs(telemetry.timeZScore) / 4.0, 1.0)
+            let ageFactor = telemetry.recipientAccountAgeDays < 7 ? 0.85 : 0.05
+            let velocityFactor = Double(telemetry.transferVelocity1Min) / 10.0
+            let timeFactor = min(abs(telemetry.timeZScore) / 4.0, 1.0)
+            
+            // 🚩 NEW: Amount Factor (Spikes if amount is greater than LKR 50,000)
+            let amountFactor = telemetry.amount > 50000.0 ? 0.9 : (telemetry.amount / 50000.0)
+            
+            // Updated weights incorporating amount
+            return min((ageFactor * 0.35) + (velocityFactor * 0.25) + (timeFactor * 0.20) + (amountFactor * 0.20), 1.0)
+        }
         
-        return min((ageFactor * 0.5) + (velocityFactor * 0.3) + (timeFactor * 0.2), 1.0)
-    }
-    
-    private func computeSHAPAttributionSum(telemetry: TransactionTelemetry) -> Double {
-        var sum = 0.0
-        if telemetry.recipientAccountAgeDays < 7 { sum += 0.4 }
-        if abs(telemetry.timeZScore) > 2.5 { sum += 0.3 }
-        if telemetry.transferVelocity1Min > 1 { sum += 0.3 }
-        return min(sum, 1.0)
-    }
+        private func computeSHAPAttributionSum(telemetry: TransactionTelemetry) -> Double {
+            var sum = 0.0
+            if telemetry.recipientAccountAgeDays < 7 { sum += 0.3 }
+            if abs(telemetry.timeZScore) > 2.5 { sum += 0.2 }
+            if telemetry.transferVelocity1Min > 1 { sum += 0.3 }
+            
+            // 🚩 NEW: Add SHAP attribution if amount is high
+            if telemetry.amount > 50000.0 { sum += 0.3 }
+            
+            return min(sum, 1.0)
+        }
     
     // MARK: - Layer 2: Explainable AI (TreeSHAP) Plain-Language Translation
     private func translateSHAPDrivers(telemetry: TransactionTelemetry) -> [String] {
-        var translations: [String] = []
-        if telemetry.recipientAccountAgeDays < 7 {
-            translations.append("Recipient account was created very recently.")
+            var translations: [String] = []
+            if telemetry.recipientAccountAgeDays < 7 {
+                translations.append("Recipient account was created very recently.")
+            }
+            if abs(telemetry.timeZScore) > 2.5 {
+                translations.append("Unusual transfer time compared to your established patterns.")
+            }
+            if telemetry.transferVelocity1Min > 1 {
+                translations.append("Multiple rapid transactions detected in a short window.")
+            }
+            // 🚩 NEW: Human-readable translation for high amounts
+            if telemetry.amount > 50000.0 {
+                translations.append("Unusually high transaction amount compared to typical behavior.")
+            }
+            if translations.isEmpty {
+                translations.append("Unusual transaction profile detected requiring verification.")
+            }
+            return translations
         }
-        if abs(telemetry.timeZScore) > 2.5 {
-            translations.append("Unusual transfer time compared to your established patterns.")
-        }
-        if telemetry.transferVelocity1Min > 1 {
-            translations.append("Multiple rapid transactions detected in a short window.")
-        }
-        if translations.isEmpty {
-            translations.append("Unusual transaction profile detected requiring verification.")
-        }
-        return translations
-    }
     
     // MARK: - Secure Storage & Keychain Services
     public func storeSecurePassphrase(_ key: String, data: Data) -> OSStatus {

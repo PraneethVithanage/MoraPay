@@ -8,22 +8,48 @@
 import UIKit
 import LocalAuthentication
 
+// MARK: - Audit Log Record Structure
+public struct FraudAuditRecord {
+    public let timestamp: String
+    public let amount: Double
+    public let riskScore: Int
+    public let factors: String
+}
+
+public class FraudAuditManager {
+    public static let shared = FraudAuditManager()
+    public private(set) var records: [FraudAuditRecord] = []
+    
+    private init() {}
+    
+    public func addRecord(amount: Double, riskScore: Double, factors: [String]) {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        let timeString = formatter.string(from: Date())
+        
+        let record = FraudAuditRecord(
+            timestamp: timeString,
+            amount: amount,
+            riskScore: Int(riskScore * 100),
+            factors: factors.joined(separator: ", ")
+        )
+        records.insert(record, at: 0) // Keep newest first
+    }
+}
+
 public class TransferViewController: UIViewController, UITextFieldDelegate, UIPickerViewDelegate, UIPickerViewDataSource {
 
     private let primaryOrange = UIColor(red: 0.96, green: 0.65, blue: 0.13, alpha: 1.0)
     
-    // Form fields
     private let bankTextField = UITextField()
     private let accountNameTextField = UITextField()
     private let accountNumberTextField = UITextField()
     private let amountTextField = UITextField()
     private let sendButton = UIButton(type: .system)
     
-    // --- Live Security Status Banner ---
     private let securityStatusView = UIView()
     private let securityStatusLabel = UILabel()
     
-    // Bank Picker Data
     private let sriLankanBanks = [
         "Select Bank",
         "Bank of Ceylon (BOC)",
@@ -43,24 +69,22 @@ public class TransferViewController: UIViewController, UITextFieldDelegate, UIPi
         setupUI()
         setupKeyboardDismissal()
         setupPicker()
-        updateLiveRiskPreview(score: 0.1) // Initial Low Risk state
+        updateLiveRiskPreview(score: 0.1)
     }
 
     private func setupUI() {
         title = "Send Money"
         view.backgroundColor = UIColor(red: 0.07, green: 0.07, blue: 0.09, alpha: 1.0)
 
-        // 1. Live Security Status Banner Setup
         securityStatusView.layer.cornerRadius = 12
         securityStatusView.translatesAutoresizingMaskIntoConstraints = false
-        
+         
         securityStatusLabel.font = UIFont.systemFont(ofSize: 13, weight: .semibold)
         securityStatusLabel.textColor = .white
         securityStatusLabel.numberOfLines = 2
         securityStatusLabel.translatesAutoresizingMaskIntoConstraints = false
         securityStatusView.addSubview(securityStatusLabel)
 
-        // 2. Bank Picker Text Field
         bankTextField.placeholder = "Select Recipient Bank"
         bankTextField.backgroundColor = UIColor.white.withAlphaComponent(0.08)
         bankTextField.textColor = .white
@@ -69,7 +93,6 @@ public class TransferViewController: UIViewController, UITextFieldDelegate, UIPi
         bankTextField.setLeftPaddingPoints(16)
         bankTextField.translatesAutoresizingMaskIntoConstraints = false
 
-        // 3. Account Name Field
         accountNameTextField.placeholder = "Account Holder Name"
         accountNameTextField.backgroundColor = UIColor.white.withAlphaComponent(0.08)
         accountNameTextField.textColor = .white
@@ -79,7 +102,6 @@ public class TransferViewController: UIViewController, UITextFieldDelegate, UIPi
         accountNameTextField.setLeftPaddingPoints(16)
         accountNameTextField.translatesAutoresizingMaskIntoConstraints = false
 
-        // 4. Account Number Field
         accountNumberTextField.placeholder = "Account Number"
         accountNumberTextField.backgroundColor = UIColor.white.withAlphaComponent(0.08)
         accountNumberTextField.textColor = .white
@@ -90,7 +112,6 @@ public class TransferViewController: UIViewController, UITextFieldDelegate, UIPi
         accountNumberTextField.setLeftPaddingPoints(16)
         accountNumberTextField.translatesAutoresizingMaskIntoConstraints = false
 
-        // 5. Amount Text Field Setup
         amountTextField.placeholder = "LKR 0.00"
         amountTextField.font = UIFont.systemFont(ofSize: 38, weight: .bold)
         amountTextField.textColor = primaryOrange
@@ -100,7 +121,6 @@ public class TransferViewController: UIViewController, UITextFieldDelegate, UIPi
         amountTextField.delegate = self
         amountTextField.translatesAutoresizingMaskIntoConstraints = false
 
-        // Confirm Button Setup
         sendButton.setTitle("Confirm & Pay", for: .normal)
         sendButton.setTitleColor(.white, for: .normal)
         sendButton.titleLabel?.font = UIFont.systemFont(ofSize: 18, weight: .bold)
@@ -154,22 +174,21 @@ public class TransferViewController: UIViewController, UITextFieldDelegate, UIPi
 
     private func updateLiveRiskPreview(score: Double) {
         let percentage = Int(score * 100)
-        
-        // Granular Multi-Color Grading Scale: Dark Green -> Green -> Yellow -> Orange -> Red
+         
         if score < 0.20 {
-            securityStatusView.backgroundColor = UIColor(red: 0.05, green: 0.40, blue: 0.15, alpha: 1.0) // 🟢 Dark Green (Very Secure)
+            securityStatusView.backgroundColor = UIColor(red: 0.05, green: 0.40, blue: 0.15, alpha: 1.0)
             securityStatusLabel.text = "🔒 Security Status: Optimal (\(percentage)% Risk)"
         } else if score < 0.45 {
-            securityStatusView.backgroundColor = UIColor(red: 0.20, green: 0.70, blue: 0.30, alpha: 1.0) // 🟢 Light Green (Normal)
+            securityStatusView.backgroundColor = UIColor(red: 0.20, green: 0.70, blue: 0.30, alpha: 1.0)
             securityStatusLabel.text = "✅ Security Status: Low Risk (\(percentage)% Risk)"
         } else if score < 0.60 {
-            securityStatusView.backgroundColor = UIColor(red: 0.80, green: 0.70, blue: 0.10, alpha: 1.0) // 🟡 Yellow (Caution)
+            securityStatusView.backgroundColor = UIColor(red: 0.80, green: 0.70, blue: 0.10, alpha: 1.0)
             securityStatusLabel.text = "⚠️ Security Status: Moderate Caution (\(percentage)% Risk)"
         } else if score < 0.75 {
-            securityStatusView.backgroundColor = UIColor(red: 0.90, green: 0.45, blue: 0.10, alpha: 1.0) // 🟠 Orange (Elevated)
+            securityStatusView.backgroundColor = UIColor(red: 0.90, green: 0.45, blue: 0.10, alpha: 1.0)
             securityStatusLabel.text = "⚠️ Security Status: Elevated Risk (\(percentage)% Risk)"
         } else {
-            securityStatusView.backgroundColor = UIColor(red: 0.85, green: 0.15, blue: 0.15, alpha: 1.0) // 🔴 Red (High Risk / JIT Trigger)
+            securityStatusView.backgroundColor = UIColor(red: 0.85, green: 0.15, blue: 0.15, alpha: 1.0)
             securityStatusLabel.text = "🚨 Security Status: High Fraud Risk (\(percentage)% Risk)"
         }
     }
@@ -200,123 +219,87 @@ public class TransferViewController: UIViewController, UITextFieldDelegate, UIPi
         view.endEditing(true)
     }
 
-    // MARK: - UIPickerView DataSource & Delegate
     public func numberOfComponents(in pickerView: UIPickerView) -> Int { return 1 }
-    
-    public func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
-        return sriLankanBanks.count
-    }
-    
-    public func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
-        return sriLankanBanks[row]
-    }
-    
+    public func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int { return sriLankanBanks.count }
+    public func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? { return sriLankanBanks[row] }
     public func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
-        if row == 0 {
-            bankTextField.text = ""
-        } else {
-            bankTextField.text = sriLankanBanks[row]
-        }
+        bankTextField.text = (row == 0) ? "" : sriLankanBanks[row]
     }
 
     public func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-        if textField == bankTextField {
-            accountNameTextField.becomeFirstResponder()
-        } else if textField == accountNameTextField {
-            accountNumberTextField.becomeFirstResponder()
-        } else if textField == accountNumberTextField {
-            amountTextField.becomeFirstResponder()
-        } else {
-            textField.resignFirstResponder()
-        }
+        if textField == bankTextField { accountNameTextField.becomeFirstResponder() }
+        else if textField == accountNameTextField { accountNumberTextField.becomeFirstResponder() }
+        else if textField == accountNumberTextField { amountTextField.becomeFirstResponder() }
+        else { textField.resignFirstResponder() }
         return true
     }
 
     @objc private func handleSend() {
-            dismissKeyboard()
-             
-            guard let bank = bankTextField.text, !bank.isEmpty else {
-                showAlert(title: "Missing Bank", message: "Please select a recipient bank.")
-                return
-            }
-
-            guard let accountName = accountNameTextField.text, !accountName.trimmingCharacters(in: .whitespaces).isEmpty else {
-                showAlert(title: "Missing Name", message: "Please enter the account holder's name.")
-                return
-            }
-
-            guard let accountNumber = accountNumberTextField.text, !accountNumber.trimmingCharacters(in: .whitespaces).isEmpty else {
-                showAlert(title: "Missing Account Number", message: "Please enter a valid account number.")
-                return
-            }
-
-            let rawAmount = (amountTextField.text ?? "").replacingOccurrences(of: "LKR", with: "")
-            guard let amount = Double(rawAmount), amount > 0 else {
-                showAlert(title: "Invalid Amount", message: "Please enter a valid transfer amount greater than zero.")
-                return
-            }
-
-            let securityEngine = SecurityEngine()
-            if !securityEngine.validateTransactionRisk(amount: amount) {
-                showAlert(title: "Transfer Limit Exceeded", message: "Single transfers over LKR10,000.00 require branch verification.")
-                return
-            }
-
-            if amount > AccountManager.shared.currentBalance {
-                showAlert(title: "Insufficient Balance", message: "You do not have enough funds to complete this transaction.")
-                return
-            }
+        dismissKeyboard()
          
-            // --- REAL ML FRAUD RISK ANALYSIS WITH DYNAMIC TIME CHECK ---
-            let currentVelocity = TransactionTracker.shared.recordAndGetVelocity()
-            let dynamicZScore = calculateDynamicTimeZScore() // 🕒 Fetches device time live
-            print("------>",dynamicZScore)
-            let telemetry = TransactionTelemetry(
-                amount: amount,
-                recipientAccountAgeDays: currentVelocity > 1 ? 0 : 30,
-                transferVelocity1Min: currentVelocity,
-                timeZScore: dynamicZScore, // 🚩 Automatically spikes to 3.5 if tested between 10 PM - 6 AM
-                isRootedOrJailbroken: false
-            )
-            
-            let analysisResult = MoraPaySecurityEngine.shared.evaluateTransaction(telemetry)
-            
-            // Update live banner color immediately
-            updateLiveRiskPreview(score: analysisResult.compositeScore)
-             
-            MoraPaySecureStore.shared.saveDetailedTransactionAuditLog(
-                transactionId: UUID().uuidString,
-                amount: amount,
-                bankName: bank,
-                accountName: accountName,
-                accountNumber: accountNumber,
-                riskScore: analysisResult.compositeScore,
-                isBlocked: analysisResult.isHighRisk
-            )
-             
-            let percentage = Int(analysisResult.compositeScore * 100)
-            let factorsText = analysisResult.topRiskFactors.joined(separator: "\n• ")
-             
-            if analysisResult.isHighRisk {
-                let alert = UIAlertController(
-                    title: "🔴 High Fraud Risk Detected (\(percentage)%)",
-                    message: "Our ML security model flagged this transfer due to the following indicators:\n• \(factorsText)\n\nPlease review before proceeding.",
-                    preferredStyle: .alert
-                )
-                alert.addAction(UIAlertAction(title: "Cancel Transfer", style: .cancel, handler: nil))
-                alert.addAction(UIAlertAction(title: "Verify with Biometrics", style: .destructive) { _ in
-                    self.promptBiometricsAndExecute(bank: bank, accountName: accountName, accountNumber: accountNumber, amount: amount)
-                })
-                self.present(alert, animated: true)
-            } else {
-                self.promptBiometricsAndExecute(
-                    bank: bank,
-                    accountName: accountName,
-                    accountNumber: accountNumber,
-                    amount: amount
-                )
-            }
+        guard let bank = bankTextField.text, !bank.isEmpty else {
+            showAlert(title: "Missing Bank", message: "Please select a recipient bank.")
+            return
         }
+
+        guard let accountName = accountNameTextField.text, !accountName.trimmingCharacters(in: .whitespaces).isEmpty else {
+            showAlert(title: "Missing Name", message: "Please enter the account holder's name.")
+            return
+        }
+
+        guard let accountNumber = accountNumberTextField.text, !accountNumber.trimmingCharacters(in: .whitespaces).isEmpty else {
+            showAlert(title: "Missing Account Number", message: "Please enter a valid account number.")
+            return
+        }
+
+        let rawAmount = (amountTextField.text ?? "").replacingOccurrences(of: "LKR", with: "")
+        guard let amount = Double(rawAmount), amount > 0 else {
+            showAlert(title: "Invalid Amount", message: "Please enter a valid transfer amount greater than zero.")
+            return
+        }
+
+        let currentVelocity = TransactionTracker.shared.recordAndGetVelocity()
+        let dynamicZScore = calculateDynamicTimeZScore()
+        print("------> ZScore:", dynamicZScore)
+        
+        let telemetry = TransactionTelemetry(
+            amount: amount,
+            recipientAccountAgeDays: currentVelocity > 1 ? 0 : 30,
+            transferVelocity1Min: currentVelocity,
+            timeZScore: dynamicZScore,
+            isRootedOrJailbroken: false
+        )
+         
+        let analysisResult = MoraPaySecurityEngine.shared.evaluateTransaction(telemetry)
+        updateLiveRiskPreview(score: analysisResult.compositeScore)
+         
+        // Collect & log record if high risk alert triggers
+        if analysisResult.isHighRisk {
+            FraudAuditManager.shared.addRecord(
+                amount: amount,
+                riskScore: analysisResult.compositeScore,
+                factors: analysisResult.topRiskFactors
+            )
+        }
+         
+        let percentage = Int(analysisResult.compositeScore * 100)
+        let factorsText = analysisResult.topRiskFactors.joined(separator: "\n• ")
+         
+        if analysisResult.isHighRisk {
+            let alert = UIAlertController(
+                title: "🔴 High Fraud Risk Detected (\(percentage)%)",
+                message: "Our ML security model flagged this transfer due to the following indicators:\n• \(factorsText)\n\nPlease review before proceeding.",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "Cancel Transfer", style: .cancel, handler: nil))
+            alert.addAction(UIAlertAction(title: "Verify with Biometrics", style: .destructive) { _ in
+                self.promptBiometricsAndExecute(bank: bank, accountName: accountName, accountNumber: accountNumber, amount: amount)
+            })
+            self.present(alert, animated: true)
+        } else {
+            promptBiometricsAndExecute(bank: bank, accountName: accountName, accountNumber: accountNumber, amount: amount)
+        }
+    }
 
     private func promptBiometricsAndExecute(bank: String, accountName: String, accountNumber: String, amount: Double) {
         let context = LAContext()
@@ -345,11 +328,8 @@ public class TransferViewController: UIViewController, UITextFieldDelegate, UIPi
         if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
             context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: "Confirm payment of LKR \(amount) to \(accountName)") { success, _ in
                 DispatchQueue.main.async {
-                    if success {
-                        executePayment()
-                    } else {
-                        self.showAlert(title: "Authentication Failed", message: "Biometric authentication failed. Transfer was not completed.")
-                    }
+                    if success { executePayment() }
+                    else { self.showAlert(title: "Authentication Failed", message: "Biometric authentication failed.") }
                 }
             }
         } else {
@@ -364,7 +344,6 @@ public class TransferViewController: UIViewController, UITextFieldDelegate, UIPi
     }
 }
 
-// MARK: - UITextField Extension for Inner Padding
 extension UITextField {
     func setLeftPaddingPoints(_ amount: CGFloat) {
         let paddingView = UIView(frame: CGRect(x: 0, y: 0, width: amount, height: self.frame.size.height))
@@ -384,25 +363,24 @@ public class TransactionTracker {
         return recentTimestamps.count
     }
 }
+
 private func calculateDynamicTimeZScore() -> Double {
-    let calendar = Calendar.current
-    let now = Date()
-    let hour = calendar.component(.hour, from: now)
+    let hour = DebugTimeManager.shared.getCurrentHour()
+    
+    // 5:00 AM to 10:00 PM (05:00 up to 22:00)
+    let isNormalWindow = hour >= 5 && hour < 22
     
     // 10:00 PM to 12:00 AM (22:00 up to 24:00)
-    let isNightWindow = hour >= 22 && hour < 24
+    let isLateNightWindow = hour >= 22 && hour < 24
     
-    // 1:00 PM to 5:00 PM (13:00 up to 17:00)
-    let isAfternoonWindow = hour >= 13 && hour < 17
+    // 12:00 AM to 5:00 AM (00:00 up to 05:00)
+    let isDeepNightWindow = hour >= 0 && hour < 5
     
-    if isNightWindow {
-        // Late night window risk score
-        return 2.5
-    } else if isAfternoonWindow {
-        // Afternoon anomaly window risk score
+    if isDeepNightWindow {
         return 3.5
+    } else if isLateNightWindow {
+        return 2.0
     } else {
-        // Normal baseline hours
         return 0.8
     }
 }

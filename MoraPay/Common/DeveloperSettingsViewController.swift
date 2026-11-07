@@ -1,4 +1,3 @@
-
 //
 //  DeveloperSettingsViewController.swift
 //  SecurePay
@@ -30,7 +29,7 @@ public class DeveloperSettingsViewController: UIViewController {
         view.backgroundColor = UIColor(red: 0.07, green: 0.07, blue: 0.09, alpha: 1.0)
 
         // Header Title
-        titleLabel.text = "Thesis Demo: Anomaly Time Mocking"
+        titleLabel.text = "Anomaly Time Mocking"
         titleLabel.textColor = .white
         titleLabel.font = UIFont.systemFont(ofSize: 18, weight: .bold)
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -46,11 +45,6 @@ public class DeveloperSettingsViewController: UIViewController {
         statusLabel.translatesAutoresizingMaskIntoConstraints = false
         statusCardView.addSubview(statusLabel)
 
-        // Preset Quick Action Buttons
-        let btnAfternoon = createPresetButton(title: "Set Afternoon Anomaly (2:00 PM)", color: primaryOrange, action: #selector(setAfternoonTime))
-        let btnNight = createPresetButton(title: "Set Late Night Window (11:00 PM)", color: .systemRed, action: #selector(setNightTime))
-        let btnNormal = createPresetButton(title: "Set Normal Operating Hour (10:00 AM)", color: .systemGreen, action: #selector(setNormalTime))
-
         // Custom Time Picker
         timePicker.datePickerMode = .time
         timePicker.preferredDatePickerStyle = .wheels
@@ -59,9 +53,9 @@ public class DeveloperSettingsViewController: UIViewController {
         
         applyPickerButton.setTitle("Apply Selected Time", for: .normal)
         applyPickerButton.setTitleColor(.white, for: .normal)
-        applyPickerButton.backgroundColor = UIColor.white.withAlphaComponent(0.15)
+        applyPickerButton.backgroundColor = primaryOrange
         applyPickerButton.layer.cornerRadius = 12
-        applyPickerButton.titleLabel?.font = UIFont.systemFont(ofSize: 15, weight: .semibold)
+        applyPickerButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .bold)
         applyPickerButton.translatesAutoresizingMaskIntoConstraints = false
         applyPickerButton.addTarget(self, action: #selector(applyPickerTime), for: .touchUpInside)
 
@@ -72,20 +66,8 @@ public class DeveloperSettingsViewController: UIViewController {
         resetButton.translatesAutoresizingMaskIntoConstraints = false
         resetButton.addTarget(self, action: #selector(resetTime), for: .touchUpInside)
 
-        // Stack View Container
-        let stackView = UIStackView(arrangedSubviews: [
-            btnAfternoon,
-            btnNight,
-            btnNormal
-        ])
-        stackView.axis = .vertical
-        stackView.spacing = 12
-        stackView.distribution = .fillEqually
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-
         view.addSubview(titleLabel)
         view.addSubview(statusCardView)
-        view.addSubview(stackView)
         view.addSubview(timePicker)
         view.addSubview(applyPickerButton)
         view.addSubview(resetButton)
@@ -103,50 +85,19 @@ public class DeveloperSettingsViewController: UIViewController {
             statusLabel.leadingAnchor.constraint(equalTo: statusCardView.leadingAnchor, constant: 14),
             statusLabel.trailingAnchor.constraint(equalTo: statusCardView.trailingAnchor, constant: -14),
 
-            stackView.topAnchor.constraint(equalTo: statusCardView.bottomAnchor, constant: 20),
-            stackView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            stackView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            stackView.heightAnchor.constraint(equalToConstant: 150),
-
-            timePicker.topAnchor.constraint(equalTo: stackView.bottomAnchor, constant: 15),
+            timePicker.topAnchor.constraint(equalTo: statusCardView.bottomAnchor, constant: 30),
             timePicker.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            timePicker.heightAnchor.constraint(equalToConstant: 120),
+            timePicker.heightAnchor.constraint(equalToConstant: 180),
 
-            applyPickerButton.topAnchor.constraint(equalTo: timePicker.bottomAnchor, constant: 10),
+            applyPickerButton.topAnchor.constraint(equalTo: timePicker.bottomAnchor, constant: 20),
             applyPickerButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
             applyPickerButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            applyPickerButton.heightAnchor.constraint(equalToConstant: 44),
+            applyPickerButton.heightAnchor.constraint(equalToConstant: 50),
 
-            resetButton.topAnchor.constraint(equalTo: applyPickerButton.bottomAnchor, constant: 20),
+            resetButton.topAnchor.constraint(equalTo: applyPickerButton.bottomAnchor, constant: 16),
             resetButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             resetButton.heightAnchor.constraint(equalToConstant: 44)
         ])
-    }
-
-    private func createPresetButton(title: String, color: UIColor, action: Selector) -> UIButton {
-        let btn = UIButton(type: .system)
-        btn.setTitle(title, for: .normal)
-        btn.setTitleColor(.white, for: .normal)
-        btn.backgroundColor = color.withAlphaComponent(0.85)
-        btn.layer.cornerRadius = 12
-        btn.titleLabel?.font = UIFont.systemFont(ofSize: 14, weight: .bold)
-        btn.addTarget(self, action: action, for: .touchUpInside)
-        return btn
-    }
-
-    @objc private func setAfternoonTime() {
-        DebugTimeManager.shared.simulatedHourOverride = 14 // 2:00 PM
-        updateStatusDisplay()
-    }
-
-    @objc private func setNightTime() {
-        DebugTimeManager.shared.simulatedHourOverride = 23 // 11:00 PM
-        updateStatusDisplay()
-    }
-
-    @objc private func setNormalTime() {
-        DebugTimeManager.shared.simulatedHourOverride = 10 // 10:00 AM
-        updateStatusDisplay()
     }
 
     @objc private func applyPickerTime() {
@@ -161,24 +112,26 @@ public class DeveloperSettingsViewController: UIViewController {
     }
 
     private func updateStatusDisplay() {
-        let currentHour = DebugTimeManager.shared.getCurrentHour()
-        let isNight = currentHour >= 22 && currentHour < 24
-        let isAfternoon = currentHour >= 13 && currentHour < 17
-        
-        let zScore: Double
-        if isNight {
-            zScore = 2.5
-        } else if isAfternoon {
-            zScore = 3.5
-        } else {
-            zScore = 0.8
-        }
+            let currentHour = DebugTimeManager.shared.getCurrentHour()
+            
+            let isNormalWindow = currentHour >= 5 && currentHour < 22
+            let isLateNightWindow = currentHour >= 22 && currentHour < 24
+            let isDeepNightWindow = currentHour >= 0 && currentHour < 5
+            
+            let zScore: Double
+            if isDeepNightWindow {
+                zScore = 3.5
+            } else if isLateNightWindow {
+                zScore = 2.0
+            } else {
+                zScore = 0.8
+            }
 
-        let modeText = DebugTimeManager.shared.simulatedHourOverride != nil ? "MANUAL MOCK ACTIVE" : "REAL DEVICE CLOCK"
-        statusLabel.text = """
-        • Mode: \(modeText)
-        • Simulated App Hour: \(currentHour):00
-        • Evaluated timeZScore: \(zScore)
-        """
-    }
+            let modeText = DebugTimeManager.shared.simulatedHourOverride != nil ? "MANUAL MOCK ACTIVE" : "REAL DEVICE CLOCK"
+            statusLabel.text = """
+            • Mode: \(modeText)
+            • Simulated App Hour: \(currentHour):00
+            • Evaluated timeZScore: \(zScore)
+            """
+        }
 }
