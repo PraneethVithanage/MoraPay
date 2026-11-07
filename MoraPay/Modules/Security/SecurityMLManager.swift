@@ -42,7 +42,9 @@ public final class MoraPaySecurityEngine {
             rulePenalty = 1.0
             factors.append("Device integrity compromise detected (Jailbroken/Rooted).")
         }
-        if telemetry.transferVelocity1Min > 3 {
+        
+        // Tuned: Triggers when transfer velocity is greater than 1 attempt in 1 minute (i.e., 2nd attempt onwards)
+        if telemetry.transferVelocity1Min > 1 {
             rulePenalty = max(rulePenalty, 0.9)
             factors.append("High number of rapid transfer attempts.")
         }
@@ -56,7 +58,6 @@ public final class MoraPaySecurityEngine {
         // Composite Anomaly Risk Score Formulation: S_total = w1*max(R_i) + w2*P_ML + w3*sum(Phi_k)
         let compositeScore = (w1 * rulePenalty) + (w2 * mlProbability) + (w3 * shapAttributionSum)
         let clampedScore = min(max(compositeScore, 0.0), 1.0)
-        
         let isHighRisk = clampedScore > riskThreshold
         
         if isHighRisk && factors.isEmpty {

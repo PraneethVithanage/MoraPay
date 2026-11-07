@@ -82,7 +82,7 @@ public class BankHomeViewController: UIViewController {
         balanceLabel.translatesAutoresizingMaskIntoConstraints = false
         balanceCardView.addSubview(balanceLabel)
 
-        // 3. Quick Action Buttons
+        // 3. Quick Action Buttons (Send, Activity, Security, Settings)
         let sendBtn = createActionButton(title: "Send", iconName: "paperplane.fill") { [weak self] in
             let transferVC = TransferViewController()
             self?.navigationController?.pushViewController(transferVC, animated: true)
@@ -96,13 +96,20 @@ public class BankHomeViewController: UIViewController {
             self?.tabBarController?.selectedIndex = 4
         }
 
+        // ⚙️ New Settings Quick Action Button
+        let settingsBtn = createActionButton(title: "Settings", iconName: "gearshape.fill") { [weak self] in
+            let settingsVC = DeveloperSettingsViewController()
+            self?.navigationController?.pushViewController(settingsVC, animated: true)
+        }
+
         quickActionsStack.axis = .horizontal
         quickActionsStack.distribution = .fillEqually
-        quickActionsStack.spacing = 16
+        quickActionsStack.spacing = 10
         quickActionsStack.translatesAutoresizingMaskIntoConstraints = false
         quickActionsStack.addArrangedSubview(sendBtn)
         quickActionsStack.addArrangedSubview(historyBtn)
         quickActionsStack.addArrangedSubview(securityBtn)
+        quickActionsStack.addArrangedSubview(settingsBtn) // Added to stack
         contentView.addSubview(quickActionsStack)
 
         // Constraints
@@ -129,7 +136,7 @@ public class BankHomeViewController: UIViewController {
             quickActionsStack.topAnchor.constraint(equalTo: balanceCardView.bottomAnchor, constant: 24),
             quickActionsStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             quickActionsStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-            quickActionsStack.heightAnchor.constraint(equalToConstant: 70),
+            quickActionsStack.heightAnchor.constraint(equalToConstant: 75),
             quickActionsStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -30)
         ])
     }
@@ -155,8 +162,13 @@ public class BankHomeViewController: UIViewController {
         config.title = title
         config.image = UIImage(systemName: iconName)
         config.imagePlacement = .top
-        config.imagePadding = 6
+        config.imagePadding = 4
         config.baseForegroundColor = primaryOrange
+        config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+            var outgoing = incoming
+            outgoing.font = UIFont.systemFont(ofSize: 12, weight: .bold)
+            return outgoing
+        }
         btn.configuration = config
 
         btn.addAction(UIAction(handler: { _ in action() }), for: .touchUpInside)
