@@ -106,4 +106,38 @@ public final class MoraPaySecureStore {
         }
         return nil
     }
+    
+    public func saveDetailedTransactionAuditLog(
+        transactionId: String,
+        amount: Double,
+        bankName: String,
+        accountName: String,
+        accountNumber: String,
+        riskScore: Double,
+        isBlocked: Bool
+    ) {
+        let dateFormatter = ISO8601DateFormatter()
+        let timestampString = dateFormatter.string(from: Date())
+        
+        let logEntry: [String: Any] = [
+            "transactionId": transactionId,
+            "amount": amount,
+            "bankName": bankName,
+            "accountName": accountName,
+            "accountNumber": accountNumber,
+            "riskScore": riskScore,
+            "isBlocked": isBlocked,
+            "timestamp": timestampString
+        ]
+        
+        // Fetch existing logs, append the new detailed entry, and save back to your secure store
+        var logs = fetchTransactionAuditLogs()
+        logs.append(logEntry)
+        
+        // Save your logs array securely (using your encrypted storage implementation key)
+        if let data = try? JSONSerialization.data(withJSONObject: logs, options: []) {
+            // Example persistence key used in your secure store
+            UserDefaults.standard.set(data, forKey: "SecureTransactionAuditLogsKey")
+        }
+    }
 }

@@ -44,7 +44,7 @@ public class BankHomeViewController: UIViewController {
 
     private func updateBalanceDisplay() {
         let current = AccountManager.shared.currentBalance
-        balanceLabel.text = String(format: "$%.2f", current)
+        balanceLabel.text = String(format: "LKR%.2f", current)
     }
 
     private func setupUI() {

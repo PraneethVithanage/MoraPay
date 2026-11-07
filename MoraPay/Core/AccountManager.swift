@@ -41,7 +41,9 @@ public class AccountManager {
     }
 
     public var currentBalance: Double {
+       
         get {
+           // UserDefaults.main.set(10000000, forKey: balanceKey)
             return UserDefaults.main.double(forKey: balanceKey)
         }
         set {
