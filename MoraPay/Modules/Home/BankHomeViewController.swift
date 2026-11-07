@@ -25,6 +25,7 @@ public class BankHomeViewController: UIViewController {
         setupUI()
         setupKeyboardDismissal()
         updateBalanceDisplay()
+        checkForLatestFraudModel() // 🌐 Automatic OTA check on launch
 
         NotificationCenter.default.addObserver(
             self,
@@ -45,6 +46,17 @@ public class BankHomeViewController: UIViewController {
     private func updateBalanceDisplay() {
         let current = AccountManager.shared.currentBalance
         balanceLabel.text = String(format: "LKR %.2f", current)
+    }
+
+    private func checkForLatestFraudModel() {
+        let currentVersion = UserDefaults.standard.string(forKey: "MoraPay_ActiveModelVersion") ?? "v1.0.0"
+        ModelOTASyncManager.shared.checkForUpdates(currentVersion: currentVersion) { success, newVersion in
+            DispatchQueue.main.async {
+                if success, let version = newVersion {
+                    print("✅ Successfully updated ML model OTA to version: \(version)")
+                }
+            }
+        }
     }
 
     private func setupUI() {
@@ -96,7 +108,6 @@ public class BankHomeViewController: UIViewController {
             self?.tabBarController?.selectedIndex = 4
         }
 
-        // ⚙️ New Settings Quick Action Button
         let settingsBtn = createActionButton(title: "Settings", iconName: "gearshape.fill") { [weak self] in
             let settingsVC = DeveloperSettingsViewController()
             self?.navigationController?.pushViewController(settingsVC, animated: true)
@@ -109,7 +120,7 @@ public class BankHomeViewController: UIViewController {
         quickActionsStack.addArrangedSubview(sendBtn)
         quickActionsStack.addArrangedSubview(historyBtn)
         quickActionsStack.addArrangedSubview(securityBtn)
-        quickActionsStack.addArrangedSubview(settingsBtn) // Added to stack
+        quickActionsStack.addArrangedSubview(settingsBtn)
         contentView.addSubview(quickActionsStack)
 
         // Constraints

@@ -13,11 +13,20 @@ public class SecurityEngine: UIViewController {
     private let statusCardView = UIView()
     private let statusDetailsLabel = UILabel()
     private let auditLogTextView = UITextView()
+    private let inspectShapButton = UIButton(type: .system)
 
     public override func viewDidLoad() {
         super.viewDidLoad()
         title = "Security Center"
         view.backgroundColor = UIColor(red: 0.07, green: 0.07, blue: 0.09, alpha: 1.0)
+
+        // Add Trash button to clear logs during demo
+        navigationItem.rightBarButtonItem = UIBarButtonItem(
+            image: UIImage(systemName: "trash"),
+            style: .plain,
+            target: self,
+            action: #selector(confirmClearLogs)
+        )
 
         let shieldImageView = UIImageView(image: UIImage(systemName: "shield.checkered.shield.fill"))
         shieldImageView.tintColor = primaryOrange
@@ -51,8 +60,19 @@ public class SecurityEngine: UIViewController {
         auditLogTextView.isEditable = false
         auditLogTextView.translatesAutoresizingMaskIntoConstraints = false
 
+        // Inspect SHAP Visualizer Button
+        inspectShapButton.setTitle("Inspect Last AI Feature Attributions (SHAP)", for: .normal)
+        inspectShapButton.setTitleColor(.white, for: .normal)
+        inspectShapButton.backgroundColor = UIColor(red: 0.20, green: 0.50, blue: 0.80, alpha: 1.0)
+        inspectShapButton.layer.cornerRadius = 12
+        inspectShapButton.titleLabel?.font = UIFont.systemFont(ofSize: 14, weight: .bold)
+        inspectShapButton.translatesAutoresizingMaskIntoConstraints = false
+        inspectShapButton.addTarget(self, action: #selector(openShapVisualizer), for: .touchUpInside)
+
         statusCardView.addSubview(statusDetailsLabel)
         statusCardView.addSubview(auditLogTextView)
+        statusCardView.addSubview(inspectShapButton)
+        
         view.addSubview(shieldImageView)
         view.addSubview(headerLabel)
         view.addSubview(statusCardView)
@@ -78,7 +98,12 @@ public class SecurityEngine: UIViewController {
             auditLogTextView.topAnchor.constraint(equalTo: statusDetailsLabel.bottomAnchor, constant: 12),
             auditLogTextView.leadingAnchor.constraint(equalTo: statusCardView.leadingAnchor, constant: 16),
             auditLogTextView.trailingAnchor.constraint(equalTo: statusCardView.trailingAnchor, constant: -16),
-            auditLogTextView.bottomAnchor.constraint(equalTo: statusCardView.bottomAnchor, constant: -16)
+            auditLogTextView.bottomAnchor.constraint(equalTo: inspectShapButton.topAnchor, constant: -12),
+
+            inspectShapButton.leadingAnchor.constraint(equalTo: statusCardView.leadingAnchor, constant: 16),
+            inspectShapButton.trailingAnchor.constraint(equalTo: statusCardView.trailingAnchor, constant: -16),
+            inspectShapButton.bottomAnchor.constraint(equalTo: statusCardView.bottomAnchor, constant: -16),
+            inspectShapButton.heightAnchor.constraint(equalToConstant: 44)
         ])
     }
 
@@ -88,22 +113,43 @@ public class SecurityEngine: UIViewController {
     }
     
     private func loadAuditLogsIntoView() {
-            let records = FraudAuditManager.shared.records
-            if records.isEmpty {
-                auditLogTextView.text = "📋 Flagged Fraud Audit Log:\n\nNo high-risk transactions recorded yet. Test rapid transfers or late-night times to generate logs."
-            } else {
-                var logText = "📋 Flagged Fraud Audit Log (\(records.count)):\n\n"
-                // 🚩 FIX: Added () to .enumerated()
-                for (index, rec) in records.enumerated() {
-                    logText += "[\(index + 1)] Time: \(rec.timestamp)\n"
-                    logText += "• Amount: LKR \(String(format: "%.2f", rec.amount))\n"
-                    logText += "• Risk Score: \(rec.riskScore)%\n"
-                    logText += "• Factors: \(rec.factors)\n"
-                    logText += "-----------------------------------\n"
-                }
-                auditLogTextView.text = logText
+        let records = FraudAuditManager.shared.records
+        if records.isEmpty {
+            auditLogTextView.text = "📋 Flagged Fraud Audit Log:\n\nNo high-risk transactions recorded yet. Test rapid transfers or late-night times to generate logs."
+        } else {
+            var logText = "📋 Flagged Fraud Audit Log (\(records.count)):\n\n"
+            for (index, rec) in records.enumerated() {
+                logText += "[\(index + 1)] Time: \(rec.timestamp)\n"
+                logText += "• Amount: LKR \(String(format: "%.2f", rec.amount))\n"
+                logText += "• Risk Score: \(rec.riskScore)%\n"
+                logText += "• Factors: \(rec.factors)\n"
+                logText += "-----------------------------------\n"
             }
+            auditLogTextView.text = logText
         }
+    }
+
+    @objc private func openShapVisualizer() {
+        let sampleContributions = [
+            SHAPFeatureContribution(featureName: "Time Z-Score", shapValue: 0.42),
+            SHAPFeatureContribution(featureName: "Transaction Amount", shapValue: 0.35),
+            SHAPFeatureContribution(featureName: "Transfer Velocity", shapValue: 0.15),
+            SHAPFeatureContribution(featureName: "Account Age", shapValue: -0.10)
+        ]
+        
+        let visualizerVC = TreeSHAPVisualizerViewController(contributions: sampleContributions)
+        navigationController?.pushViewController(visualizerVC, animated: true)
+    }
+
+    @objc private func confirmClearLogs() {
+        let alert = UIAlertController(title: "Clear Audit Logs", message: "Are you sure you want to clear all recorded high-risk security audit entries?", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Clear", style: .destructive) { [weak self] _ in
+            FraudAuditManager.shared.clearLogs()
+            self?.loadAuditLogsIntoView()
+        })
+        present(alert, animated: true)
+    }
 
     public func validateTransactionRisk(amount: Double) -> Bool {
         return amount <= 10000.0

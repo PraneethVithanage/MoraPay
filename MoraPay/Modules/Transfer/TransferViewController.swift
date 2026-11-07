@@ -18,22 +18,21 @@ public struct FraudAuditRecord {
 
 public class FraudAuditManager {
     public static let shared = FraudAuditManager()
+    
+    // Your existing properties/arrays...
     public private(set) var records: [FraudAuditRecord] = []
     
     private init() {}
     
     public func addRecord(amount: Double, riskScore: Double, factors: [String]) {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        let timeString = formatter.string(from: Date())
-        
-        let record = FraudAuditRecord(
-            timestamp: timeString,
-            amount: amount,
-            riskScore: Int(riskScore * 100),
-            factors: factors.joined(separator: ", ")
-        )
-        records.insert(record, at: 0) // Keep newest first
+        // ... your existing add logic
+    }
+    
+    // Add this clearLogs method:
+    public func clearLogs() {
+        records.removeAll()
+        // If you are using UserDefaults persistence:
+        UserDefaults.standard.removeObject(forKey: "SavedFraudAuditRecords")
     }
 }
 
