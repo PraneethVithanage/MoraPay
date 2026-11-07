@@ -94,7 +94,7 @@ public class TransactionViewController: UIViewController, UITableViewDelegate, U
                 let amountVal = log["amount"] as? Double ?? 0.0
                 let isBlocked = log["isBlocked"] as? Bool ?? false
                 let timestamp = log["timestamp"] as? String ?? ""
-                let amountString = String(format: "-$%.2f", amountVal)
+                let amountString = String(format: "-LKR %.2f", amountVal)
                  
                 let secureItem = TransactionItem(
                     bankName: bank,

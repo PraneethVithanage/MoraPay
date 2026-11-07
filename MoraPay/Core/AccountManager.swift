@@ -30,16 +30,6 @@ public class AccountManager {
            // UserDefaults.main.set(100000000.00, forKey: balanceKey)
         }
 
-        // Load saved transactions or initialize with defaults on first launch
-//        if UserDefaults.main.data(forKey: transactionsKey) == nil {
-//            let defaultTransactions = [
-//                TransactionItem(title: "Apple Store", bankName: nil, accountName: nil, accountNumber: nil, amount: "-$1,299.00", date: "Oct 21, 2026", iconName: "bag.fill", isCredit: false),
-//                TransactionItem(title: "Salary Deposit", bankName: nil, accountName: nil, accountNumber: nil, amount: "+$4,500.00", date: "Oct 15, 2026", iconName: "arrow.down.circle.fill", isCredit: true),
-//                TransactionItem(title: "Starbucks Coffee", bankName: nil, accountName: nil, accountNumber: nil, amount: "-$6.50", date: "Oct 14, 2026", iconName: "cup.and.saucer.fill", isCredit: false),
-//                TransactionItem(title: "Uber Ride", bankName: nil, accountName: nil, accountNumber: nil, amount: "-$24.30", date: "Oct 12, 2026", iconName: "car.fill", isCredit: false)
-//            ]
-//            saveTransactions(defaultTransactions)
-//        }
     }
 
     public var currentBalance: Double {
@@ -88,7 +78,7 @@ public class AccountManager {
             bankName: bankName,
             accountName: accountName,
             accountNumber: accountNumber,
-            amount: "-$\(String(format: "%.2f", amount))",
+            amount: "-LKR \(String(format: "%.2f", amount))",
             date: dateString,
             iconName: "paperplane.fill",
             isCredit: false

@@ -76,7 +76,7 @@ public class TransferViewController: UIViewController, UITextFieldDelegate, UIPi
         accountNumberTextField.translatesAutoresizingMaskIntoConstraints = false
 
         // 4. Amount Text Field Setup
-        amountTextField.placeholder = "$0.00"
+        amountTextField.placeholder = "LKR 0.00"
         amountTextField.font = UIFont.systemFont(ofSize: 38, weight: .bold)
         amountTextField.textColor = primaryOrange
         amountTextField.textAlignment = .center
@@ -203,7 +203,7 @@ public class TransferViewController: UIViewController, UITextFieldDelegate, UIPi
             return
         }
 
-        let rawAmount = (amountTextField.text ?? "").replacingOccurrences(of: "$", with: "")
+        let rawAmount = (amountTextField.text ?? "").replacingOccurrences(of: "LKR", with: "")
         guard let amount = Double(rawAmount), amount > 0 else {
             showAlert(title: "Invalid Amount", message: "Please enter a valid transfer amount greater than zero.")
             return
@@ -211,7 +211,7 @@ public class TransferViewController: UIViewController, UITextFieldDelegate, UIPi
 
         let securityEngine = SecurityEngine()
         if !securityEngine.validateTransactionRisk(amount: amount) {
-            showAlert(title: "Transfer Limit Exceeded", message: "Single transfers over $10,000.00 require branch verification.")
+            showAlert(title: "Transfer Limit Exceeded", message: "Single transfers over LKR10,000.00 require branch verification.")
             return
         }
 
@@ -281,12 +281,15 @@ public class TransferViewController: UIViewController, UITextFieldDelegate, UIPi
                 amount: amount
             )
             if success {
-                let alert = UIAlertController(title: "Transfer Complete", message: "Successfully sent $\(String(format: "%.2f", amount)) to \(accountName).", preferredStyle: .alert)
+                let alert = UIAlertController(title: "Transfer Complete", message: "Successfully sent LKR \(String(format: "%.2f", amount)) to \(accountName).", preferredStyle: .alert)
                 alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { _ in
-                    self.navigationController?.popViewController(animated: true)
+                    // Navigate to TransactionViewController upon success
+                    let transactionVC = TransactionViewController()
+                    self.navigationController?.pushViewController(transactionVC, animated: true)
                 }))
                 self.present(alert, animated: true)
             } else {
+                
                 self.showAlert(title: "Error", message: "Unable to process transfer. Please try again.")
             }
         }

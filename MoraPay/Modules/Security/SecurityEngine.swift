@@ -36,7 +36,7 @@ public class SecurityEngine: UIViewController {
         statusCardView.layer.borderColor = primaryOrange.withAlphaComponent(0.3).cgColor
         statusCardView.translatesAutoresizingMaskIntoConstraints = false
 
-        statusDetailsLabel.text = "• Biometric Authentication: Active\n• Single Transfer Limit: $10,000.00\n• Fraud Rule Engine: Active"
+        statusDetailsLabel.text = "• Biometric Authentication: Active\n• Single Transfer Limit: LKR 10,000.00\n• Fraud Rule Engine: Active"
         statusDetailsLabel.textColor = .lightGray
         statusDetailsLabel.font = UIFont.systemFont(ofSize: 14, weight: .medium)
         statusDetailsLabel.numberOfLines = 0
